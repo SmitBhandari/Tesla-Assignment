@@ -5,19 +5,12 @@ from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from sklearn.linear_model import LinearRegression
 import plotly.express as px
-from pmdarima import auto_arima
 
 @st.cache_data
 def get_arima_model(train_data):
     """Cache the ARIMA model to improve performance."""
-    return auto_arima(
-        train_data,
-        seasonal=False,
-        trace=False,
-        error_action="ignore",
-        suppress_warnings=True,
-        stepwise=True
-    )
+    model = ARIMA(train_data, order=(5, 1, 0))  # Replace (5, 1, 0) with your desired parameters
+    return model.fit()
 
 def run_1(df):
     st.title("Model Validation")
@@ -35,8 +28,7 @@ def run_1(df):
         if model_type == "ARIMA":
             # Use cached ARIMA model
             arima_model = get_arima_model(train["Weekly_Sales"])
-            arima_model.fit(train["Weekly_Sales"])
-            return arima_model.predict(n_periods=test_length)
+            return arima_model.forecast(steps=test_length)
 
         elif model_type == "Holt-Winters":
             model = ExponentialSmoothing(train["Weekly_Sales"], trend="add", seasonal="add", seasonal_periods=52)
@@ -75,9 +67,23 @@ def run_1(df):
             continue
 
         # Forecast using all three models
-        arima_forecast = forecast_model(train, test_length, model_type="ARIMA")
-        hw_forecast = forecast_model(train, test_length, model_type="Holt-Winters")
-        lr_forecast = forecast_model(train, test_length, model_type="Linear Regression")
+        try:
+            arima_forecast = forecast_model(train, test_length, model_type="ARIMA")
+        except Exception as e:
+            arima_forecast = [np.nan] * test_length
+            st.warning(f"ARIMA failed for lag {lag_months}: {e}")
+
+        try:
+            hw_forecast = forecast_model(train, test_length, model_type="Holt-Winters")
+        except Exception as e:
+            hw_forecast = [np.nan] * test_length
+            st.warning(f"Holt-Winters failed for lag {lag_months}: {e}")
+
+        try:
+            lr_forecast = forecast_model(train, test_length, model_type="Linear Regression")
+        except Exception as e:
+            lr_forecast = [np.nan] * test_length
+            st.warning(f"Linear Regression failed for lag {lag_months}: {e}")
 
         # Collect the forecasts for June 2024 for each model and lag
         results.append({
