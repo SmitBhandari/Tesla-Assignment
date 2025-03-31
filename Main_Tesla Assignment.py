@@ -52,13 +52,19 @@ if os.path.exists(file_path):
         train = df_sku.loc[:train_end_date]
         test = df_sku.loc[train_end_date:]
 
+        # Cache the ARIMA model to improve performance
+        @st.cache_data
+        def get_arima_model(train_data):
+            """Fit and cache the ARIMA model."""
+            model = ARIMA(train_data, order=(5, 1, 0))  # Replace (5, 1, 0) with your desired parameters
+            return model.fit()
+
         # Forecasting based on selected model
         def forecast_model(train, test, model_type):
             if model_type == "ARIMA":
-                # Use statsmodels ARIMA
-                model = ARIMA(train["Weekly_Sales"], order=(5, 1, 0))  # Replace (5, 1, 1) with your desired parameters
-                fit = model.fit()
-                return fit.forecast(steps=len(test))
+                # Use cached ARIMA model
+                arima_model = get_arima_model(train["Weekly_Sales"])
+                return arima_model.forecast(steps=len(test))
 
             elif model_type == "Holt-Winters":
                 model = ExponentialSmoothing(train["Weekly_Sales"], trend="add", seasonal="add", seasonal_periods=52)
