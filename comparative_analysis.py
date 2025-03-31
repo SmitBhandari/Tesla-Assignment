@@ -5,7 +5,19 @@ import plotly.express as px
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from sklearn.linear_model import LinearRegression
+from pmdarima import auto_arima
 
+@st.cache_data
+def get_arima_model(train_data):
+    """Cache the ARIMA model to improve performance."""
+    return auto_arima(
+        train_data,
+        seasonal=False,
+        trace=False,
+        error_action="ignore",
+        suppress_warnings=True,
+        stepwise=True
+    )
 
 @st.cache_data
 def calculate_kpis(df, models, lags):
@@ -35,7 +47,10 @@ def calculate_kpis(df, models, lags):
             try:
                 # Forecasting based on the model
                 if model == "ARIMA":
-                    forecast = ARIMA(train["Weekly_Sales"], order=(2, 1, 2)).fit().forecast(steps=len(test))
+                    arima_model = get_arima_model(train["Weekly_Sales"])
+                    arima_model.fit(train["Weekly_Sales"])
+                    forecast = arima_model.predict(n_periods=len(test))
+                    forecast = arima_model.predict(n_periods=len(test))
                 elif model == "Holt-Winters":
                     forecast = ExponentialSmoothing(train["Weekly_Sales"], trend="add", seasonal="add", seasonal_periods=52).fit().forecast(steps=len(test))
                 elif model == "Linear Regression":
