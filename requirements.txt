@@ -1,0 +1,8 @@
+streamlit==1.25.0  # For building the interactive dashboard
+pandas==1.5.3      # For data manipulation and preprocessing
+numpy==1.24.3      # For numerical computations
+plotly==5.15.0     # For creating interactive visualizations
+statsmodels==0.14.0  # For ARIMA and Holt-Winters models
+scikit-learn==1.2.2  # For Linear Regression and other ML models
+matplotlib==3.7.1  # For additional visualizations (e.g., heatmaps)
+seaborn==0.12.2    # For heatmap visualizations in Comparative Analysis
