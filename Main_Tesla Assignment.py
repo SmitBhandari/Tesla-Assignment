@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from sklearn.linear_model import LinearRegression
+from pmdarima import auto_arima
 
 # Set page configuration
 st.set_page_config(page_title="Forecasting Dashboard", layout="wide", initial_sidebar_state="expanded")
@@ -52,12 +53,32 @@ if os.path.exists(file_path):
         train = df_sku.loc[:train_end_date]
         test = df_sku.loc[train_end_date:]
 
+        # Cache the ARIMA model to improve performance
+        @st.cache_data
+        def get_arima_model(train_data):
+            return auto_arima(
+                train_data,
+                seasonal=False,
+                trace=False,
+                error_action="ignore",
+                suppress_warnings=True,
+                stepwise=True
+            )
+        
         # Forecasting based on selected model
         def forecast_model(train, test, model_type):
             if model_type == "ARIMA":
-                model = ARIMA(train["Weekly_Sales"], order=(2, 1, 2))
-                fit = model.fit()
-                return fit.forecast(steps=len(test))
+                # Use auto_arima to find the best (p, d, q) parameters
+                arima_model = auto_arima(
+                    train["Weekly_Sales"],
+                    seasonal=False,
+                    trace=True,  # Set to True to see the parameter selection process
+                    error_action="ignore",
+                    suppress_warnings=True,
+                    stepwise=True
+                )
+                arima_model.fit(train["Weekly_Sales"])
+                return arima_model.predict(n_periods=len(test))
 
             elif model_type == "Holt-Winters":
                 model = ExponentialSmoothing(train["Weekly_Sales"], trend="add", seasonal="add", seasonal_periods=52)
