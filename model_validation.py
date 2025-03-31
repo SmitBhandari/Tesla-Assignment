@@ -94,7 +94,7 @@ def run_1(df):
         # Update the "Actual Demand" line to be black and dashed
     fig.for_each_trace(
         lambda trace: trace.update(
-            line=dict(color="black", dash="dash")
+            line=dict(color="green", dash="dash")
         ) if trace.name == "Actual Demand" else None
     )
     
