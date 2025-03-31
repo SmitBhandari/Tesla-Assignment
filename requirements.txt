@@ -7,5 +7,5 @@ scikit-learn     # For Linear Regression and other ML models
 matplotlib       # For additional visualizations (e.g., heatmaps)
 seaborn         # For heatmap visualizations in Comparative Analysis
 pillow
-cython>=0.29.21
-pmdarima>=1.8.2
+cython
+pmdarima
