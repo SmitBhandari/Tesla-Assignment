@@ -9,7 +9,7 @@ from sklearn.linear_model import LinearRegression
 @st.cache_data
 def get_arima_model(train_data):
     """Cache the ARIMA model to improve performance."""
-    model = ARIMA(train_data, order=(5, 1, 0))  # Replace (5, 1, 0) with your desired parameters
+    model = ARIMA(train_data, order=(6, 1, 1))  # Replace (5, 1, 0) with your desired parameters
     return model.fit()
 
 @st.cache_data
