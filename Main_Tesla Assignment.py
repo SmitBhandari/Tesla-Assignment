@@ -68,15 +68,8 @@ if os.path.exists(file_path):
         # Forecasting based on selected model
         def forecast_model(train, test, model_type):
             if model_type == "ARIMA":
-                # Use auto_arima to find the best (p, d, q) parameters
-                arima_model = auto_arima(
-                    train["Weekly_Sales"],
-                    seasonal=False,
-                    trace=True,  # Set to True to see the parameter selection process
-                    error_action="ignore",
-                    suppress_warnings=True,
-                    stepwise=True
-                )
+                # Use cached ARIMA model
+                arima_model = get_arima_model(train["Weekly_Sales"])
                 arima_model.fit(train["Weekly_Sales"])
                 return arima_model.predict(n_periods=len(test))
 
