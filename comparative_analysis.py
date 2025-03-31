@@ -5,19 +5,12 @@ import plotly.express as px
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from sklearn.linear_model import LinearRegression
-from pmdarima import auto_arima
 
 @st.cache_data
 def get_arima_model(train_data):
     """Cache the ARIMA model to improve performance."""
-    return auto_arima(
-        train_data,
-        seasonal=False,
-        trace=False,
-        error_action="ignore",
-        suppress_warnings=True,
-        stepwise=True
-    )
+    model = ARIMA(train_data, order=(5, 1, 0))  # Replace (5, 1, 0) with your desired parameters
+    return model.fit()
 
 @st.cache_data
 def calculate_kpis(df, models, lags):
@@ -47,12 +40,13 @@ def calculate_kpis(df, models, lags):
             try:
                 # Forecasting based on the model
                 if model == "ARIMA":
+                    # Use cached ARIMA model
                     arima_model = get_arima_model(train["Weekly_Sales"])
-                    arima_model.fit(train["Weekly_Sales"])
-                    forecast = arima_model.predict(n_periods=len(test))
-                    forecast = arima_model.predict(n_periods=len(test))
+                    forecast = arima_model.forecast(steps=len(test))
                 elif model == "Holt-Winters":
-                    forecast = ExponentialSmoothing(train["Weekly_Sales"], trend="add", seasonal="add", seasonal_periods=52).fit().forecast(steps=len(test))
+                    forecast = ExponentialSmoothing(
+                        train["Weekly_Sales"], trend="add", seasonal="add", seasonal_periods=52
+                    ).fit().forecast(steps=len(test))
                 elif model == "Linear Regression":
                     train["Time"] = np.arange(len(train))
                     test["Time"] = np.arange(len(train), len(train) + len(test))
@@ -131,7 +125,7 @@ def run(df):
     # Filter data for the selected SKU
     df_sku = df[df["SKU_ID"] == selected_sku]
 
-    # Generate lag options dynamically (1 to 12 months)
+    # Models to compare
     models = ["ARIMA", "Holt-Winters", "Linear Regression"]
 
     # Calculate KPIs (cached)
