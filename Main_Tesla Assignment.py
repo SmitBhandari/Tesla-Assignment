@@ -56,7 +56,7 @@ if os.path.exists(file_path):
         def forecast_model(train, test, model_type):
             if model_type == "ARIMA":
                 # Use statsmodels ARIMA
-                model = ARIMA(train["Weekly_Sales"], order=(5, 1, 0))  # Replace (5, 5, 5) with your desired parameters
+                model = ARIMA(train["Weekly_Sales"], order=(5, 1, 0))  # Replace (5, 1, 1) with your desired parameters
                 fit = model.fit()
                 return fit.forecast(steps=len(test))
 
