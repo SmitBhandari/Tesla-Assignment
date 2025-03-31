@@ -91,5 +91,12 @@ def run_1(df):
         title=f"Forecast Comparison for SKU {selected_sku} (June 2024)",
         labels={"value": "Weekly Sales", "variable": "Model"},
     )
+        # Update the "Actual Demand" line to be black and dashed
+    fig.for_each_trace(
+        lambda trace: trace.update(
+            line=dict(color="black", dash="dash")
+        ) if trace.name == "Actual Demand" else None
+    )
+    
     fig.update_layout(xaxis_title="Lag (Months)", yaxis_title="Weekly Sales", legend_title="Model")
     st.plotly_chart(fig, use_container_width=True)
