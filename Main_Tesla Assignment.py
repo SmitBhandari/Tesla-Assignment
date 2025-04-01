@@ -137,9 +137,9 @@ if os.path.exists(file_path):
             
                 # Forecast for the upcoming week
                 if selected_model == "ARIMA":
+                    # Use the cached ARIMA model
                     arima_model = get_arima_model(extended_train["Weekly_Sales"])
-                    arima_model.fit(extended_train["Weekly_Sales"])
-                    upcoming_week_forecast = arima_model.predict(n_periods=1)
+                    upcoming_week_forecast = arima_model.forecast(steps=1)
             
                 elif selected_model == "Holt-Winters":
                     hw_model = ExponentialSmoothing(extended_train["Weekly_Sales"], trend="add", seasonal="add", seasonal_periods=52)
