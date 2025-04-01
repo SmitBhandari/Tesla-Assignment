@@ -56,7 +56,7 @@ if os.path.exists(file_path):
         @st.cache_data
         def get_arima_model(train_data):
             """Fit and cache the ARIMA model."""
-            model = ARIMA(train_data, order=(3, 1, 3))  # Replace (2, 1, 3) with your desired parameters
+            model = ARIMA(train_data, order=(2, 1, 3))  # Replace (2, 1, 3) with your desired parameters
             return model.fit()
 
         # Forecasting based on selected model
