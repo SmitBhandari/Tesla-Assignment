@@ -54,13 +54,13 @@ def calculate_kpis(df, models, lags):
                     lr_model.fit(train[["Time"]], train["Weekly_Sales"])
                     forecast = lr_model.predict(test[["Time"]])
 
-                # Ensure no negative forecast values
+                # Ensuring no negative forecast values
                 forecast = np.maximum(forecast, 0)
 
-                # Align forecast with test index
+                # Aligning forecast with test index
                 forecast = pd.Series(forecast, index=test.index)
 
-                # Calculate KPIs
+                # Calculating KPIs
                 mad = np.mean(np.abs(test["Weekly_Sales"] - forecast))
                 mbe = np.mean(forecast - test["Weekly_Sales"])  # Bias: Mean difference between forecasted and actual values
 
@@ -70,7 +70,7 @@ def calculate_kpis(df, models, lags):
 
                 wmape = (np.sum(np.abs(test["Weekly_Sales"] - forecast)) / np.sum(test["Weekly_Sales"])) * 100
 
-                # Append KPI data
+                # Appending KPI data
                 kpi_data.append({
                     "Model": model,
                     "Lag": f"{lag}-Month Lag",
@@ -85,10 +85,10 @@ def calculate_kpis(df, models, lags):
                 st.warning(f"Forecasting failed for model {model} and lag {lag}-Month: {e}")
                 continue
 
-    # Create a DataFrame for KPIs
+    # Creating a DataFrame for KPIs
     kpi_df = pd.DataFrame(kpi_data)
 
-    # Ensure the Lag column is ordered from 1 to 12 in ascending order
+    # Ensuring the Lag column is ordered from 1 to 12 in ascending order
     kpi_df["Lag"] = pd.Categorical(kpi_df["Lag"], categories=[f"{i}-Month Lag" for i in range(1, 13)], ordered=True)
 
     return kpi_df
@@ -155,7 +155,7 @@ def run(df):
     best_lag = best_row["Lag"]
     best_kpi_value = best_row[selected_kpi]
 
-    # Display the recommendation
+    # Displaying the recommendation
     st.markdown("### Recommendation")
     if selected_kpi == "Bias":
         st.success(
