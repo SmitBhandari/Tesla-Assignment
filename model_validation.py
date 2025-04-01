@@ -9,7 +9,7 @@ import plotly.express as px
 @st.cache_data
 def get_arima_model(train_data):
     """Cache the ARIMA model to improve performance."""
-    model = ARIMA(train_data, order=(6, 1, 1))  # Replace (5, 1, 0) with your desired parameters
+    model = ARIMA(train_data, order=(2, 1, 3))  # Replace (5, 1, 0) with your desired parameters
     return model.fit()
 
 def run_1(df):
