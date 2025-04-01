@@ -7,7 +7,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from sklearn.linear_model import LinearRegression
 
-# Set page configuration
+# Setting page configuration
 st.set_page_config(page_title="Forecasting Dashboard", layout="wide", initial_sidebar_state="expanded")
 
 logo_icon = "Tesla Logo.png"
@@ -81,13 +81,13 @@ if os.path.exists(file_path):
         # Generate forecast
         forecast = forecast_model(train, test, selected_model)
 
-        # Ensure no negative forecast values as demand cannot be negative
+        # Ensuring no negative forecast values as demand cannot be negative
         forecast = np.maximum(forecast, 0)
 
-        # Align forecast with test index
+        # Aligning forecast with test index
         forecast = pd.Series(forecast, index=test.index)
 
-        # Evaluate performance
+        # Evaluating performance
         mad = np.mean(np.abs(test["Weekly_Sales"] - forecast))
         mse = np.mean((test["Weekly_Sales"] - forecast) ** 2)  # Mean Squared Error
         rmse = np.sqrt(mse)  # Root Mean Squared Error
@@ -96,7 +96,7 @@ if os.path.exists(file_path):
         # Weighted MAPE calculation
         wmape = (np.sum(np.abs(test["Weekly_Sales"] - forecast)) / np.sum(test["Weekly_Sales"])) * 100
 
-        # Display scorecards on the left side
+        # Displaying scorecards on the left side
         col1, col2 = st.columns([1, 3])
         with col1:
             with st.container(border=True):   
@@ -107,7 +107,7 @@ if os.path.exists(file_path):
                 st.metric(label="Weighted Mean Absolute Percentage Error (WMAPE)", value=f"{wmape:.2f}%")
                 st.metric(label="Mean Bias Error (MBE)", value=f"{mbe:.2f}")
 
-        # Display the chart on the right side
+        # Displaying the chart on the right side
         with col2:
             with st.container(border=True):
                 fig = go.Figure()
@@ -123,11 +123,11 @@ if os.path.exists(file_path):
                     height = 527  # Set the figure height
                 )    
                 st.plotly_chart(fig, use_container_width=True)
-            # Add a text section below the line graph
+            # Adding a text section below the line graph
             last_forecast_date = test.index[-1] if not test.empty else None
             last_forecast_value = forecast.iloc[-1] if not forecast.empty else None
             
-            # Forecast for the upcoming week
+            # Forecasting for the upcoming week
             if last_forecast_date is not None:
                 # Extend the training data to include the test data
                 extended_train = pd.concat([train, test])
@@ -159,7 +159,7 @@ if os.path.exists(file_path):
                 upcoming_week_date = None
                 upcoming_week_forecast_value = None
             
-            # Display the forecast summary
+            # Displaying the forecast summary
             if last_forecast_date and last_forecast_value is not None:
                 st.markdown("### Forecast Summary")
                 st.success(
