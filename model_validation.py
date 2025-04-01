@@ -9,11 +9,11 @@ import plotly.express as px
 @st.cache_data
 def get_arima_model(train_data):
     """Cache the ARIMA model to improve performance."""
-    model = ARIMA(train_data, order=(2, 1, 3))  # Replace (5, 1, 0) with your desired parameters
+    model = ARIMA(train_data, order=(2, 1, 3))
     return model.fit()
 
 def run_1(df):
-    st.title("Model Validation")
+    st.title("Monthly Forecast & Model Validation")
 
     # Sidebar: Dropdown for selecting SKU_ID
     st.sidebar.markdown("### Model Validation Options")
@@ -23,15 +23,31 @@ def run_1(df):
     # Filter data for the selected SKU_ID
     df_sku = df[df["SKU_ID"] == selected_sku]
 
+    # Ensure the data is sorted by date
+    df_sku = df_sku.sort_index()
+
+    # Aggregate weekly data into monthly data
+    df_sku_monthly = df_sku.resample('M').sum()  # Sum weekly sales to get monthly sales
+    df_sku_monthly.rename(columns={"Weekly_Sales": "Monthly_Sales"}, inplace=True)  # Rename the column
+
+    # Define forecast months
+    forecast_months = {
+        "January 2024": "2024-01-31",
+        "February 2024": "2024-02-29",
+        "March 2024": "2024-03-31",
+        "April 2024": "2024-04-30",
+        "May 2024": "2024-05-31",
+        "June 2024": "2024-06-30"
+    }
+
     # Forecasting function
     def forecast_model(train, test_length, model_type):
         if model_type == "ARIMA":
-            # Use cached ARIMA model
-            arima_model = get_arima_model(train["Weekly_Sales"])
+            arima_model = get_arima_model(train["Monthly_Sales"])
             return arima_model.forecast(steps=test_length)
 
         elif model_type == "Holt-Winters":
-            model = ExponentialSmoothing(train["Weekly_Sales"], trend="add", seasonal="add", seasonal_periods=52)
+            model = ExponentialSmoothing(train["Monthly_Sales"], trend="add", seasonal="add", seasonal_periods=12)
             fit = model.fit()
             return fit.forecast(steps=test_length)
 
@@ -39,25 +55,104 @@ def run_1(df):
             train["Time"] = np.arange(len(train))
             future_time = np.arange(len(train), len(train) + test_length)
             lr_model = LinearRegression()
-            lr_model.fit(train[["Time"]], train["Weekly_Sales"])
+            lr_model.fit(train[["Time"]], train["Monthly_Sales"])
             return lr_model.predict(future_time.reshape(-1, 1))
 
-    # Create a list to store the forecast results
+    # Create a table for forecast results (January to June 2024)
     results = []
+    for month_name, month_date in forecast_months.items():
+        month_date = pd.Timestamp(month_date)
 
-    # Precompute the test length for June 2024
-    june_2024 = pd.Timestamp("2024-06-30")
+        # Define train-test split based on the selected month
+        train_end_date = month_date - pd.DateOffset(months=1)
+        train = df_sku_monthly.loc[:train_end_date]
+        test = df_sku_monthly.loc[month_date:month_date]
 
-    # Loop over lag values from 1 to 12
-    for lag_months in range(1, 13):
-        # Define train-test split based on lag
-        train_end_date = june_2024 - pd.DateOffset(months=lag_months)
-        train = df_sku.loc[:train_end_date]
-        test_length = len(df_sku.loc[train_end_date:])
-
-        if test_length == 0:
-            # Skip if there's no test data
+        if test.empty or train.empty:
+            # Handle missing data gracefully
             results.append({
+                "Month": month_name,
+                "Actual Value": "No Data",
+                "ARIMA Forecast": "No Data",
+                "Holt-Winters Forecast": "No Data",
+                "Linear Regression Forecast": "No Data"
+            })
+            continue
+
+        # Forecast using all three models
+        arima_forecast = forecast_model(train, len(test), model_type="ARIMA")
+        hw_forecast = forecast_model(train, len(test), model_type="Holt-Winters")
+        lr_forecast = forecast_model(train, len(test), model_type="Linear Regression")
+
+        # Collect the forecasts for the selected month
+        results.append({
+            "Month": month_name,
+            "Actual Value": test["Monthly_Sales"].iloc[0] if not test.empty else "No Data",
+            "ARIMA Forecast": arima_forecast[0] if len(arima_forecast) > 0 else "No Data",
+            "Holt-Winters Forecast": hw_forecast[0] if len(hw_forecast) > 0 else "No Data",
+            "Linear Regression Forecast": lr_forecast[0] if len(lr_forecast) > 0 else "No Data"
+        })
+
+    # Convert results to DataFrame for display in the table
+    results_df = pd.DataFrame(results)
+
+    # Display the table
+    st.markdown("### Forecast Results (January to June 2024)")
+    st.dataframe(results_df.style.format({
+        "Actual Value": "{:.2f}" if results_df["Actual Value"].dtype != "object" else None,
+        "ARIMA Forecast": "{:.2f}" if results_df["ARIMA Forecast"].dtype != "object" else None,
+        "Holt-Winters Forecast": "{:.2f}" if results_df["Holt-Winters Forecast"].dtype != "object" else None,
+        "Linear Regression Forecast": "{:.2f}" if results_df["Linear Regression Forecast"].dtype != "object" else None
+    }).set_properties(**{
+        "text-align": "center",
+        "border-color": "black",
+        "border-width": "1px",
+        "border-style": "solid"
+    }))
+
+    # Create a line graph from the table
+    st.markdown("### Forecast Comparison (January to June 2024)")
+    if not results_df.empty:
+        # Filter out rows with "No Data"
+        graph_df = results_df.replace("No Data", np.nan).dropna()
+
+        # Convert "Month" to datetime for proper plotting
+        graph_df["Month"] = pd.to_datetime(graph_df["Month"], format="%B %Y")
+
+        # Plot the line graph
+        fig = px.line(
+            graph_df,
+            x="Month",
+            y=["Actual Value", "ARIMA Forecast", "Holt-Winters Forecast", "Linear Regression Forecast"],
+            title=f"Forecast Comparison for SKU {selected_sku}",
+            labels={"value": "Monthly Sales", "variable": "Model"},
+            markers=True
+        )
+        # Update the "Actual Demand" line to be green and dashed
+        fig.for_each_trace(
+            lambda trace: trace.update(
+                line=dict(color="green", dash="dash")
+            ) if trace.name == "Actual Value" else None
+        )
+
+
+        fig.update_layout(xaxis_title="Month", yaxis_title="Monthly Sales", legend_title="Model")
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("No data available for the selected SKU.")
+
+    # Add the new graph for forecast comparison across lags
+    st.markdown("### Forecast Comparison Across Lags (June 2024)")
+    june_2024 = pd.Timestamp("2024-06-30")
+    lag_results = []
+
+    for lag_months in range(1, 13):
+        train_end_date = june_2024 - pd.DateOffset(months=lag_months)
+        train = df_sku_monthly.loc[:train_end_date]
+        test_length = 1
+
+        if train.empty:
+            lag_results.append({
                 "Lag (Months)": lag_months,
                 "ARIMA Forecast": np.nan,
                 "Holt-Winters Forecast": np.nan,
@@ -66,58 +161,37 @@ def run_1(df):
             })
             continue
 
-        # Forecast using all three models
-        try:
-            arima_forecast = forecast_model(train, test_length, model_type="ARIMA")
-        except Exception as e:
-            arima_forecast = [np.nan] * test_length
-            st.warning(f"ARIMA failed for lag {lag_months}: {e}")
+        arima_forecast = forecast_model(train, test_length, model_type="ARIMA")
+        hw_forecast = forecast_model(train, test_length, model_type="Holt-Winters")
+        lr_forecast = forecast_model(train, test_length, model_type="Linear Regression")
 
-        try:
-            hw_forecast = forecast_model(train, test_length, model_type="Holt-Winters")
-        except Exception as e:
-            hw_forecast = [np.nan] * test_length
-            st.warning(f"Holt-Winters failed for lag {lag_months}: {e}")
-
-        try:
-            lr_forecast = forecast_model(train, test_length, model_type="Linear Regression")
-        except Exception as e:
-            lr_forecast = [np.nan] * test_length
-            st.warning(f"Linear Regression failed for lag {lag_months}: {e}")
-
-        # Collect the forecasts for June 2024 for each model and lag
-        results.append({
+        lag_results.append({
             "Lag (Months)": lag_months,
-            "ARIMA Forecast": arima_forecast[-1] if len(arima_forecast) > 0 else np.nan,
-            "Holt-Winters Forecast": hw_forecast[-1] if len(hw_forecast) > 0 else np.nan,
-            "Linear Regression Forecast": lr_forecast[-1] if len(lr_forecast) > 0 else np.nan,
-            "Actual Demand": df_sku.loc[june_2024, "Weekly_Sales"] if june_2024 in df_sku.index else np.nan
+            "ARIMA Forecast": arima_forecast[0] if len(arima_forecast) > 0 else np.nan,
+            "Holt-Winters Forecast": hw_forecast[0] if len(hw_forecast) > 0 else np.nan,
+            "Linear Regression Forecast": lr_forecast[0] if len(lr_forecast) > 0 else np.nan,
+            "Actual Demand": df_sku_monthly.loc[june_2024, "Monthly_Sales"] if june_2024 in df_sku_monthly.index else np.nan
         })
 
-    # Convert results to DataFrame for display in table format
-    results_df = pd.DataFrame(results)
+    lag_results_df = pd.DataFrame(lag_results)
 
-    # Display the table
-    st.markdown("### Forecast Results for June 2024")
-    st.dataframe(results_df)
-
-    # Visualization: Plot the forecasts for each model across lags, including Actual Demand
-    st.markdown("### Forecast Comparison Across Lags")
-    fig = px.line(
-        results_df,
+    # Plot the lag comparison graph
+    fig_lag = px.line(
+        lag_results_df,
         x="Lag (Months)",
         y=["ARIMA Forecast", "Holt-Winters Forecast", "Linear Regression Forecast", "Actual Demand"],
         markers=True,
-        title=f"Forecast Comparison for SKU {selected_sku} (June 2024)",
-        labels={"value": "Weekly Sales", "variable": "Model"},
+        title=f"Forecast Comparison Across Lags for SKU {selected_sku} (June 2024)",
+        labels={"value": "Monthly Sales", "variable": "Model"}
     )
 
-    # Update the "Actual Demand" line to be black and dashed
-    fig.for_each_trace(
+    # Update the "Actual Demand" line to be green and dashed
+    fig_lag.for_each_trace(
         lambda trace: trace.update(
-            line=dict(color="black", dash="dash")
+            line=dict(color="green", dash="dash")
         ) if trace.name == "Actual Demand" else None
     )
 
-    fig.update_layout(xaxis_title="Lag (Months)", yaxis_title="Weekly Sales", legend_title="Model")
-    st.plotly_chart(fig, use_container_width=True)
+
+    fig_lag.update_layout(xaxis_title="Lag (Months)", yaxis_title="Monthly Sales", legend_title="Model")
+    st.plotly_chart(fig_lag, use_container_width=True)
