@@ -126,16 +126,40 @@ if os.path.exists(file_path):
             # Add a text section below the line graph
             last_forecast_date = test.index[-1] if not test.empty else None
             last_forecast_value = forecast.iloc[-1] if not forecast.empty else None
-
+            
             # Forecast for the upcoming week
             if last_forecast_date is not None:
+                # Extend the training data to include the test data
+                extended_train = pd.concat([train, test])
+            
+                # Define the upcoming week's date
                 upcoming_week_date = last_forecast_date + pd.DateOffset(weeks=1)
-                upcoming_week_forecast = forecast_model(train, pd.DataFrame(index=[upcoming_week_date]), selected_model)
-                upcoming_week_forecast_value = np.maximum(upcoming_week_forecast[0], 0)  # Ensure no negative values
+            
+                # Forecast for the upcoming week
+                if selected_model == "ARIMA":
+                    arima_model = get_arima_model(extended_train["Weekly_Sales"])
+                    arima_model.fit(extended_train["Weekly_Sales"])
+                    upcoming_week_forecast = arima_model.predict(n_periods=1)
+            
+                elif selected_model == "Holt-Winters":
+                    hw_model = ExponentialSmoothing(extended_train["Weekly_Sales"], trend="add", seasonal="add", seasonal_periods=52)
+                    hw_fit = hw_model.fit()
+                    upcoming_week_forecast = hw_fit.forecast(steps=1)
+            
+                elif selected_model == "Linear Regression":
+                    extended_train["Time"] = np.arange(len(extended_train))
+                    future_time = np.array([[len(extended_train)]])  # Time index for the upcoming week
+                    lr_model = LinearRegression()
+                    lr_model.fit(extended_train[["Time"]], extended_train["Weekly_Sales"])
+                    upcoming_week_forecast = lr_model.predict(future_time)
+            
+                # Ensure no negative values
+                upcoming_week_forecast_value = np.maximum(upcoming_week_forecast[0], 0)
             else:
                 upcoming_week_date = None
                 upcoming_week_forecast_value = None
-
+            
+            # Display the forecast summary
             if last_forecast_date and last_forecast_value is not None:
                 st.markdown("### Forecast Summary")
                 st.success(
@@ -144,7 +168,7 @@ if os.path.exists(file_path):
                     f"The forecast for the upcoming week (**{upcoming_week_date.strftime('%Y-%m-%d')}**) is **{upcoming_week_forecast_value:.2f}**."
                 )
             else:
-                st.warning("Forecast data is not available for the selected SKU, lag, or model.")  
+                st.warning("Forecast data is not available for the selected SKU, lag, or model.")
 
     elif page == "Comparative Analysis":
         # Redirect to the Comparative Analysis page
