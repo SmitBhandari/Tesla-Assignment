@@ -20,17 +20,17 @@ def run_1(df):
     sku_options = df["SKU_ID"].unique()
     selected_sku = st.sidebar.selectbox("Select SKU_ID", sku_options)
 
-    # Filter data for the selected SKU_ID
+    # Filtering data for the selected SKU_ID
     df_sku = df[df["SKU_ID"] == selected_sku]
 
-    # Ensure the data is sorted by date
+    # Ensuring the data is sorted by date
     df_sku = df_sku.sort_index()
 
-    # Aggregate weekly data into monthly data
+    # Aggregating weekly data into monthly data
     df_sku_monthly = df_sku.resample('M').sum()  # Sum weekly sales to get monthly sales
     df_sku_monthly.rename(columns={"Weekly_Sales": "Monthly_Sales"}, inplace=True)  # Rename the column
 
-    # Define forecast months
+    # Defining forecast months
     forecast_months = {
         "January 2024": "2024-01-31",
         "February 2024": "2024-02-29",
@@ -58,7 +58,7 @@ def run_1(df):
             lr_model.fit(train[["Time"]], train["Monthly_Sales"])
             return lr_model.predict(future_time.reshape(-1, 1))
 
-    # Create a table for forecast results (January to June 2024)
+    # Creating a table for forecast results (January to June 2024)
     results = []
     for month_name, month_date in forecast_months.items():
         month_date = pd.Timestamp(month_date)
@@ -79,7 +79,7 @@ def run_1(df):
             })
             continue
 
-        # Forecast using all three models
+        # Forecasting using all three models
         arima_forecast = forecast_model(train, len(test), model_type="ARIMA")
         hw_forecast = forecast_model(train, len(test), model_type="Holt-Winters")
         lr_forecast = forecast_model(train, len(test), model_type="Linear Regression")
@@ -93,10 +93,10 @@ def run_1(df):
             "Linear Regression Forecast": lr_forecast[0] if len(lr_forecast) > 0 else "No Data"
         })
 
-    # Convert results to DataFrame for display in the table
+    # Converting results to DataFrame for display in the table
     results_df = pd.DataFrame(results)
 
-    # Display the table
+    # Displaying the table
     st.markdown("### Forecast Results (January to June 2024)")
     st.dataframe(results_df.style.format({
         "Actual Value": "{:.2f}" if results_df["Actual Value"].dtype != "object" else None,
@@ -110,7 +110,7 @@ def run_1(df):
         "border-style": "solid"
     }))
 
-    # Create a line graph from the table
+    # Creating a line graph from the table
     st.markdown("### Forecast Comparison (January to June 2024)")
     if not results_df.empty:
         # Filter out rows with "No Data"
@@ -175,7 +175,7 @@ def run_1(df):
 
     lag_results_df = pd.DataFrame(lag_results)
 
-    # Plot the lag comparison graph
+    # Plotting the lag comparison graph
     fig_lag = px.line(
         lag_results_df,
         x="Lag (Months)",
@@ -185,7 +185,7 @@ def run_1(df):
         labels={"value": "Monthly Sales", "variable": "Model"}
     )
 
-    # Update the "Actual Demand" line to be green and dashed
+    # Updating the "Actual Demand" line to be green and dashed
     fig_lag.for_each_trace(
         lambda trace: trace.update(
             line=dict(color="green", dash="dash")
