@@ -123,6 +123,18 @@ if os.path.exists(file_path):
                     height = 527  # Set the figure height
                 )    
                 st.plotly_chart(fig, use_container_width=True)
+        # Add a text section below the line graph
+        last_forecast_date = test.index[-1] if not test.empty else None
+        last_forecast_value = forecast.iloc[-1] if not forecast.empty else None
+
+        if last_forecast_date and last_forecast_value is not None:
+            st.markdown("### Forecast Summary")
+            st.success(
+                f"For SKU **{selected_sku}**, the latest weekly forecast for the date (**{last_forecast_date.strftime('%Y-%m-%d')}**) "
+                f"at the **{selected_lag}** using the **{selected_model}** model is **{last_forecast_value:.2f}**."
+            )
+        else:
+            st.warning("Forecast data is not available for the selected SKU, lag, or model.")  
 
     elif page == "Comparative Analysis":
         # Redirect to the Comparative Analysis page
